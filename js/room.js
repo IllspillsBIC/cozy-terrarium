@@ -107,7 +107,7 @@ export class Room {
     const geo = new THREE.PlaneGeometry(56, 20);
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 });
     const wall = new THREE.Mesh(geo, mat);
-    wall.position.set(6, 3, -5);
+    wall.position.set(6, 3, -6);
     this.group.add(wall);
   }
 
@@ -181,12 +181,12 @@ export class Room {
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x7a5420, roughness: 0.6 });
 
     const frame = new THREE.Mesh(new THREE.BoxGeometry(3.8, 5.2, 0.15), frameMat);
-    frame.position.set(-7, 2.1, -4.88);
+    frame.position.set(-7, 2.1, -5.88);
     this.group.add(frame);
 
     const sillMat = new THREE.MeshStandardMaterial({ color: 0x9a7030, roughness: 0.6 });
     const sill = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.18, 0.5), sillMat);
-    sill.position.set(-7, -0.4, -4.65);
+    sill.position.set(-7, -0.4, -5.65);
     this.group.add(sill);
 
     // Live animated sky via WeatherSystem canvas
@@ -203,49 +203,49 @@ export class Room {
     }
     const glassMat = new THREE.MeshBasicMaterial({ map: this._windowTex, side: THREE.DoubleSide });
     const glass = new THREE.Mesh(new THREE.PlaneGeometry(3.1, 4.6), glassMat);
-    glass.position.set(-7, 2.1, -4.83);
+    glass.position.set(-7, 2.1, -5.83);
     this.group.add(glass);
 
     // Window dividers in front of glass
     const crossMat = new THREE.MeshStandardMaterial({ color: 0x6a4418, roughness: 0.5 });
     const hBar = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.1, 0.09), crossMat);
-    hBar.position.set(-7, 2.1, -4.79);
+    hBar.position.set(-7, 2.1, -5.79);
     this.group.add(hBar);
     const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.1, 4.8, 0.09), crossMat);
-    vBar.position.set(-7, 2.1, -4.79);
+    vBar.position.set(-7, 2.1, -5.79);
     this.group.add(vBar);
 
     const innerSill = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.1, 0.35), sillMat);
-    innerSill.position.set(-7, -0.4, -4.65);
+    innerSill.position.set(-7, -0.4, -5.65);
     this.group.add(innerSill);
 
     // Small potted plant on sill
     const potMat = new THREE.MeshStandardMaterial({ color: 0xb05828, roughness: 0.8 });
     const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.1, 0.22, 7), potMat);
-    pot.position.set(-6.4, -0.2, -4.62);
+    pot.position.set(-6.4, -0.2, -5.62);
     this.group.add(pot);
     const plantMat = new THREE.MeshStandardMaterial({ color: 0x286812, roughness: 0.9 });
     const plantBall = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6, 5), plantMat);
-    plantBall.position.set(-6.4, 0.1, -4.62);
+    plantBall.position.set(-6.4, 0.1, -5.62);
     this.group.add(plantBall);
 
     // Cat silhouette sitting on sill
     const catMat = new THREE.MeshStandardMaterial({ color: 0x180a04, roughness: 1.0 });
     const catBody = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), catMat);
     catBody.scale.set(1.3, 0.95, 0.85);
-    catBody.position.set(-7.65, -0.18, -4.58);
+    catBody.position.set(-7.65, -0.18, -5.58);
     this.group.add(catBody);
     const catHead = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), catMat);
-    catHead.position.set(-7.65, 0.10, -4.58);
+    catHead.position.set(-7.65, 0.10, -5.58);
     this.group.add(catHead);
     [-0.07, 0.07].forEach(dx => {
       const ear = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.09, 4), catMat);
-      ear.position.set(-7.65 + dx, 0.25, -4.58);
+      ear.position.set(-7.65 + dx, 0.25, -5.58);
       this.group.add(ear);
     });
     const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.40, 6), catMat);
     tail.rotation.z = 0.9;
-    tail.position.set(-7.95, -0.10, -4.58);
+    tail.position.set(-7.95, -0.10, -5.58);
     this.group.add(tail);
 
     // Light shaft — opacity driven by time of day in update()
@@ -270,14 +270,14 @@ export class Room {
   _buildBookshelf() {
     const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a2e10, roughness: 0.9 });
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(4.2, 5.5, 0.85), woodMat);
-    shelf.position.set(7, 0.5, -4.52);
+    shelf.position.set(7, 0.5, -5.52);
     this.group.add(shelf);
 
     // Shelf boards (visible horizontal lines)
     const boardMat = new THREE.MeshStandardMaterial({ color: 0x5a3c18, roughness: 0.85 });
     [-1.5, -0.3, 0.9, 2.1].forEach(sy => {
       const board = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.06, 0.8), boardMat);
-      board.position.set(7, sy + 0.5 - 0.5, -4.52);
+      board.position.set(7, sy + 0.5 - 0.5, -5.52);
       this.group.add(board);
     });
 
@@ -301,7 +301,7 @@ export class Room {
         const col = bookColors[slotIdx % bookColors.length];
         const bMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.8 });
         const book = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.5), bMat);
-        book.position.set(7 + bx + bw / 2, sy + 0.5 + bh / 2 - 0.5, -4.22);
+        book.position.set(7 + bx + bw / 2, sy + 0.5 + bh / 2 - 0.5, -5.22);
         book.rotation.y = (slotIdx % 5 === 0) ? 0.08 : 0;
         this.group.add(book);
         bx += bw + 0.025;
@@ -313,7 +313,7 @@ export class Room {
         // Small clay pot / vase
         const vaseMat = new THREE.MeshStandardMaterial({ color: 0xc07038, roughness: 0.8 });
         const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.08, 0.35, 8), vaseMat);
-        vase.position.set(7 + 1.45, sy + 0.5 + 0.18, -4.22);
+        vase.position.set(7 + 1.45, sy + 0.5 + 0.18, -5.22);
         this.group.add(vase);
       }
       if (si === 3) {
@@ -365,7 +365,7 @@ export class Room {
 
         const clockMat = new THREE.MeshStandardMaterial({ map: clockTex, roughness: 0.5 });
         const clock = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.08), clockMat);
-        clock.position.set(7 + 1.45, sy + 0.5 + 0.28, -4.18);
+        clock.position.set(7 + 1.45, sy + 0.5 + 0.28, -5.18);
         this.group.add(clock);
       }
     });
@@ -516,23 +516,23 @@ export class Room {
     const rightGeo = new THREE.PlaneGeometry(1.4, 5.4);
 
     this._leftCurtain = new THREE.Mesh(leftGeo, mat);
-    this._leftCurtain.position.set(-8.3, 2.1, -4.82);
+    this._leftCurtain.position.set(-8.3, 2.1, -5.82);
     this.group.add(this._leftCurtain);
 
     this._rightCurtain = new THREE.Mesh(rightGeo, mat.clone());
-    this._rightCurtain.position.set(-5.7, 2.1, -4.82);
+    this._rightCurtain.position.set(-5.7, 2.1, -5.82);
     this.group.add(this._rightCurtain);
 
     // Curtain rod
     const rodMat = new THREE.MeshStandardMaterial({ color: 0x8a6030, roughness: 0.4, metalness: 0.5 });
     const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 4.5, 8), rodMat);
     rod.rotation.z = Math.PI / 2;
-    rod.position.set(-7, 4.7, -4.82);
+    rod.position.set(-7, 4.7, -5.82);
     this.group.add(rod);
     // Rod finials
     [-9.3, -4.7].forEach(rx => {
       const fin = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), rodMat);
-      fin.position.set(rx, 4.7, -4.82);
+      fin.position.set(rx, 4.7, -5.82);
       this.group.add(fin);
     });
   }
@@ -542,7 +542,7 @@ export class Room {
     // Frame
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x7a5020, roughness: 0.6, metalness: 0.1 });
     const frame = new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.7, 0.1), frameMat);
-    frame.position.set(-1.5, 4.2, -4.92);
+    frame.position.set(-1.5, 4.2, -5.92);
     this.group.add(frame);
 
     // Painting canvas — a tiny stylized terrarium/nature scene
@@ -612,7 +612,7 @@ export class Room {
 
     const paintMat = new THREE.MeshStandardMaterial({ map: paintTex, roughness: 0.5 });
     const painting = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.35), paintMat);
-    painting.position.set(-1.5, 4.2, -4.87);
+    painting.position.set(-1.5, 4.2, -5.87);
     this.group.add(painting);
   }
 
@@ -1051,7 +1051,7 @@ export class Room {
 
   // ── Wall decorations — poster, photos, paintings ──────────────────────────
   _buildWallDecor() {
-    const WZ = -4.87; // wall face z (just in front of the wall plane)
+    const WZ = -5.87; // wall face z (just in front of the wall plane)
 
     // ── Botanical poster (left side, between window and existing painting) ──
     const posterTex = makeTexture((ctx, w, h) => {
@@ -2300,14 +2300,14 @@ export class Room {
       const bx = 5.2 + (i / 10) * 3.6;
       const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: 0.9 });
       const bulb = new THREE.Mesh(glowGeo, mat);
-      bulb.position.set(bx, 3.56, -4.14);
+      bulb.position.set(bx, 3.56, -5.14);
       this.group.add(bulb);
       // Tiny wire between bulbs
       if (i > 0) {
         const wireMat = new THREE.LineBasicMaterial({ color: 0x3a2808, transparent: true, opacity: 0.6 });
         const pts = [
-          new THREE.Vector3(5.2 + ((i - 1) / 10) * 3.6, 3.56 + Math.sin(i * 0.8) * 0.04, -4.14),
-          new THREE.Vector3(bx, 3.56, -4.14)
+          new THREE.Vector3(5.2 + ((i - 1) / 10) * 3.6, 3.56 + Math.sin(i * 0.8) * 0.04, -5.14),
+          new THREE.Vector3(bx, 3.56, -5.14)
         ];
         const wire = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat);
         this.group.add(wire);
@@ -2315,17 +2315,17 @@ export class Room {
     }
     // Soft fairy light glow over bookshelf
     const fairyAmb = new THREE.PointLight(0xfffce0, 0.34, 5.5);
-    fairyAmb.position.set(7.0, 3.4, -4.2);
+    fairyAmb.position.set(7.0, 3.4, -5.2);
     this.group.add(fairyAmb);
 
     // Hanging ivy planter on wall (between window and painting)
     const bracketMat = new THREE.MeshStandardMaterial({ color: 0x4a2808, roughness: 0.8, metalness: 0.3 });
     const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 0.25), bracketMat);
-    bracket.position.set(-3.8, 4.6, -4.9);
+    bracket.position.set(-3.8, 4.6, -5.9);
     this.group.add(bracket);
     const ivyPotMat = new THREE.MeshStandardMaterial({ color: 0x8a4820, roughness: 0.85 });
     const ivyPot = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.10, 0.22, 8), ivyPotMat);
-    ivyPot.position.set(-3.8, 4.35, -4.82);
+    ivyPot.position.set(-3.8, 4.35, -5.82);
     this.group.add(ivyPot);
     const ivyMat = new THREE.MeshStandardMaterial({ color: 0x2a6010, roughness: 0.9 });
     // Draping vine strands
@@ -2333,11 +2333,11 @@ export class Room {
      [0.13, 0.06, -0.50],  [-0.09, -0.05, -0.70]].forEach(([vx, vz, dropY], k) => {
       const vine = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.008, 0.45 + k * 0.06, 4), ivyMat);
       vine.rotation.z = vx * 1.2;
-      vine.position.set(-3.8 + vx, 4.35 + dropY * 0.5, -4.82 + vz * 0.1);
+      vine.position.set(-3.8 + vx, 4.35 + dropY * 0.5, -5.82 + vz * 0.1);
       this.group.add(vine);
       const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.07 + k * 0.01, 5, 4), ivyMat);
       leaf.scale.set(1, 0.5, 1);
-      leaf.position.set(-3.8 + vx * 1.6, 4.35 + dropY * 0.88, -4.82 + vz * 0.15);
+      leaf.position.set(-3.8 + vx * 1.6, 4.35 + dropY * 0.88, -5.82 + vz * 0.15);
       this.group.add(leaf);
     });
 
@@ -2345,12 +2345,12 @@ export class Room {
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0xd4b010, transparent: true, opacity: 0.75 });
     [-0.055, 0.055].forEach(dx => {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.017, 6, 4), eyeMat);
-      eye.position.set(-7.65 + dx, 0.12, -4.52);
+      eye.position.set(-7.65 + dx, 0.12, -5.52);
       this.group.add(eye);
     });
     // Subtle amber glow from cat's eyes
     const catGlow = new THREE.PointLight(0xd4a010, 0.14, 0.9);
-    catGlow.position.set(-7.65, 0.10, -4.50);
+    catGlow.position.set(-7.65, 0.10, -5.50);
     this.group.add(catGlow);
 
     // Extra mood: faint warm fill light near terrariums (fireplace-adjacent feel)
