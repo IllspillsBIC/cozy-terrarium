@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cozy Terrarium</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Top HUD -->
+    <div id="top-hud">
+      <div id="terrarium-name">Terrarium 1</div>
+      <div id="env-gauges">
+        <div class="gauge">
+          <span class="gauge-icon">💧</span>
+          <span class="gauge-label">Humidity</span>
+          <div class="gauge-bar"><div class="gauge-fill" id="humidity-fill"></div></div>
+          <span class="gauge-value" id="humidity-value">60%</span>
+        </div>
+        <div class="gauge">
+          <span class="gauge-icon">🌡️</span>
+          <span class="gauge-label">Temp</span>
+          <span class="gauge-value" id="temp-value">22°C</span>
+        </div>
+        <div class="gauge">
+          <span class="gauge-icon">🌱</span>
+          <span class="gauge-label">Soil</span>
+          <div class="gauge-bar"><div class="gauge-fill" id="soil-fill"></div></div>
+          <span class="gauge-value" id="soil-value">70%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Arrows -->
+    <button id="nav-left" class="nav-btn">◀</button>
+    <button id="nav-right" class="nav-btn">▶</button>
+
+    <!-- Notification badges container -->
+    <div id="notifications-container"></div>
+
+    <!-- Care Panel (hidden by default) -->
+    <div id="care-panel" class="hidden">
+      <div id="care-panel-title">Care Needed</div>
+      <div id="care-list"></div>
+      <button id="care-panel-close">×</button>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div id="bottom-controls">
+      <div id="speed-controls">
+        <span class="ctrl-label">Speed:</span>
+        <button class="speed-btn active" data-speed="1">1x</button>
+        <button class="speed-btn" data-speed="1.2">1.2x</button>
+        <button class="speed-btn" data-speed="1.5">1.5x</button>
+        <button class="speed-btn" data-speed="2">2x</button>
+      </div>
+
+      <div id="toolbar">
+        <div id="tool-tabs">
+          <button class="tool-tab active" data-tab="plants">Plants</button>
+          <button class="tool-tab" data-tab="substrates">Substrate</button>
+          <button class="tool-tab" data-tab="hardscape">Hardscape</button>
+          <button class="tool-tab" data-tab="tools">Tools</button>
+        </div>
+
+        <div id="tab-plants" class="tab-content active">
+          <div class="item-grid" id="plant-grid"></div>
+        </div>
+
+        <div id="tab-substrates" class="tab-content hidden">
+          <div class="item-grid" id="substrate-grid"></div>
+        </div>
+
+        <div id="tab-hardscape" class="tab-content hidden">
+          <div class="item-grid" id="hardscape-grid"></div>
+        </div>
+
+        <div id="tab-tools" class="tab-content hidden">
+          <div class="item-grid" id="tools-grid">
+            <div class="tool-item active" data-tool="place" title="Place">🌿 Place</div>
+            <div class="tool-item" data-tool="water" title="Water">💧 Water</div>
+            <div class="tool-item" data-tool="mist" title="Mist">🌫️ Mist</div>
+            <div class="tool-item" data-tool="scissors" title="Clip">✂️ Clip</div>
+            <div class="tool-item" data-tool="remove" title="Remove">🗑️ Remove</div>
+            <div class="tool-item" data-tool="sculpt" title="Sculpt Soil">⛏️ Sculpt</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="terrarium-controls">
+        <button id="add-terrarium-btn">+ Add</button>
+        <span id="terrarium-counter">1 / 1</span>
+        <button id="music-btn" title="Music volume">🔊</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading-screen">
+    <div id="loading-text">Loading Terrarium...</div>
+  </div>
+
+  <audio id="bg-music" src="loop.wav" loop style="display:none"></audio>
+  <script>
+    (function () {
+      // ── loop.wav ─────────────────────────────────────────────────────────────
+      const audio = document.getElementById('bg-music');
+      function tryPlay() {
+        audio.play().then(() => {
+          window.removeEventListener('click', tryPlay);
+          window.removeEventListener('keydown', tryPlay);
+        }).catch(() => {});
+      }
+      audio.play().catch(() => {
+        window.addEventListener('click', tryPlay);
+        window.addEventListener('keydown', tryPlay);
+      });
+
+      const btn = document.getElementById('music-btn');
+      const states = [
+        { volume: 1.0, label: '🔊' },
+        { volume: 0.2, label: '🔉' },
+        { volume: 0.0, label: '🔇' },
+      ];
+      let stateIdx = 0;
+
+      // ── ambient.wav (seamless crossfade) ──────────────────────────────────────
+      const AMBIENT_FULL = 0.2; // ambient's natural/full volume level
+      const FADE = 2;
+      const srcs = [new Audio('ambient.wav'), new Audio('ambient.wav')];
+      srcs.forEach(a => { a.preload = 'auto'; a.volume = 0; });
+      let cur = 0, fading = false;
+      let ambientBase = AMBIENT_FULL; // scaled by volume button; used everywhere
+
+      function doCrossfade() {
+        if (fading) return;
+        fading = true;
+        const next = 1 - cur;
+        srcs[next].currentTime = 0;
+        srcs[next].play().catch(() => {});
+        const t0 = performance.now();
+        function tick() {
+          const t = Math.min((performance.now() - t0) / (FADE * 1000), 1);
+          srcs[cur].volume  = (1 - t) * ambientBase;
+          srcs[next].volume = t       * ambientBase;
+          if (t < 1) {
+            requestAnimationFrame(tick);
+          } else {
+            srcs[cur].pause();
+            cur = next;
+            fading = false;
+          }
+        }
+        requestAnimationFrame(tick);
+      }
+
+      function watch() {
+        const a = srcs[cur];
+        if (a.duration && a.currentTime >= a.duration - FADE) doCrossfade();
+        requestAnimationFrame(watch);
+      }
+
+      function start() {
+        srcs[cur].volume = ambientBase;
+        srcs[cur].play().then(watch).catch(() => {});
+      }
+
+      srcs[cur].play().then(() => {
+        srcs[cur].volume = ambientBase;
+        watch();
+      }).catch(() => {
+        function onInteract() {
+          start();
+          window.removeEventListener('click', onInteract);
+          window.removeEventListener('keydown', onInteract);
+        }
+        window.addEventListener('click', onInteract);
+        window.addEventListener('keydown', onInteract);
+      });
+
+      // ── Volume button — controls loop.wav and ambient.wav together ────────────
+      btn.addEventListener('click', () => {
+        stateIdx    = (stateIdx + 1) % states.length;
+        const vol   = states[stateIdx].volume;
+        audio.volume = vol;
+        ambientBase  = vol * AMBIENT_FULL;
+        // Apply immediately to the currently active ambient source
+        if (!fading) srcs[cur].volume = ambientBase;
+        btn.textContent = states[stateIdx].label;
+      });
+    })();
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
