@@ -35,9 +35,10 @@ export const SUBSTRATE_LIST = Object.values(SUBSTRATE_TYPES);
 const GRID_W = 20;
 const GRID_D = 8;
 
-const SUB_W      = 4.83;
-const SUB_D      = 3.22;
+export const SUB_W      = 4.83;
+export const SUB_D      = 3.22;
 const SUB_BASE_Y = -2.0125;
+export const SUB_SURFACE_Y = -1.3625; // substrate top surface Y in terrarium local space
 const SUB_BASE_H = 0.65;
 const SLOPE_FRONT_H = SUB_BASE_H * 0.10;  // 0.065 — very thin front edge
 const SLOPE_REAR_H  = SUB_BASE_H * 1.30;  // 0.845 — tall rear edge

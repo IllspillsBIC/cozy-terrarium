@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import { Plant, PLANT_TYPES } from './plant.js';
-import { Substrate } from './substrate.js';
+import { Substrate, SUB_W, SUB_D, SUB_SURFACE_Y } from './substrate.js';
 import { CareSystem } from './careSystem.js';
 import { HardscapeItem, HARDSCAPE_TYPES } from './hardscape.js';
 
@@ -13,6 +13,13 @@ const GLASS_T = 0.06;
 
 // Substrate top surface approximate Y (matches substrate.js SUB_BASE_Y + SUB_BASE_H)
 const SUBSTRATE_TOP_Y = -(GLASS_H / 2) + 0.65; // = -1.3625
+
+// Placement grid
+const PLACE_COLS = 20;
+const PLACE_ROWS = 12;
+const CELL_W = SUB_W / PLACE_COLS;  // ~0.2415
+const CELL_D = SUB_D / PLACE_ROWS;  // ~0.2683
+const GRID_Y  = SUB_SURFACE_Y + 0.025; // slightly above substrate surface
 
 let _terrariumCounter = 1;
 
@@ -28,6 +35,8 @@ export class Terrarium {
     this.plants = [];
     this.hardscape = [];
     this._placementCounter = 0;
+    this._occupiedCells = new Set(); // keys: "col,row"
+    this._gridMesh = null;
     this.substrate = new Substrate(options.substrateType || 'tropical');
     this.careSystem = new CareSystem();
 
@@ -45,6 +54,7 @@ export class Terrarium {
     this._buildGlass();
     this._buildFrame();
     this._buildSubstrate();
+    this._buildPlacementGrid();
     this.group.add(this._hardscapeGroup);
     this.group.add(this._plantsGroup);
   }
@@ -140,6 +150,55 @@ export class Terrarium {
     this._substrateGroup.add(subGroup);
   }
 
+  // ── Placement Grid ────────────────────────────────────────────────────────
+
+  _buildPlacementGrid() {
+    const verts = [];
+    const hw = SUB_W / 2, hd = SUB_D / 2;
+    const y = GRID_Y;
+    for (let c = 0; c <= PLACE_COLS; c++) {
+      const x = -hw + c * CELL_W;
+      verts.push(x, y, -hd,  x, y, hd);
+    }
+    for (let r = 0; r <= PLACE_ROWS; r++) {
+      const z = -hd + r * CELL_D;
+      verts.push(-hw, y, z,  hw, y, z);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    const mat = new THREE.LineBasicMaterial({
+      color: 0xffffff, opacity: 0.20, transparent: true, depthWrite: false
+    });
+    this._gridMesh = new THREE.LineSegments(geo, mat);
+    this._gridMesh.visible = false;
+    this.group.add(this._gridMesh);
+  }
+
+  showPlacementGrid(v) { if (this._gridMesh) this._gridMesh.visible = v; }
+
+  /** Convert local-space x/z (within terrarium group) to grid col/row. */
+  hitToCell(lx, lz) {
+    const col = Math.floor((lx + SUB_W / 2) / CELL_W);
+    const row = Math.floor((lz + SUB_D / 2) / CELL_D);
+    return {
+      col: Math.max(0, Math.min(PLACE_COLS - 1, col)),
+      row: Math.max(0, Math.min(PLACE_ROWS - 1, row))
+    };
+  }
+
+  /** Convert grid cell to normalized 0..1 position. */
+  cellToNorm(col, row) {
+    return {
+      nx: (col + 0.5) / PLACE_COLS,
+      nz: (row + 0.5) / PLACE_ROWS
+    };
+  }
+
+  isCellFree(col, row) { return !this._occupiedCells.has(`${col},${row}`); }
+
+  _occupyCell(col, row) { this._occupiedCells.add(`${col},${row}`); }
+  _freeCell(col, row)   { this._occupiedCells.delete(`${col},${row}`); }
+
   // ── Plants ────────────────────────────────────────────────────────────────
 
   /**
@@ -147,23 +206,41 @@ export class Terrarium {
    * @param {string} typeId - plant type id
    * @param {number} nx - 0..1 across width
    * @param {number} nz - 0..1 across depth
+   * @param {number} variant - variant index
+   * @param {number|null} col - grid column (computed from nx if null)
+   * @param {number|null} row - grid row (computed from nz if null)
    */
-  addPlant(typeId, nx, nz, variant = 0) {
+  addPlant(typeId, nx, nz, variant = 0, col = null, row = null) {
     if (!PLANT_TYPES[typeId]) return null;
-    const x = (nx - 0.5) * (GLASS_W - 0.6);
-    const z = (nz - 0.5) * (GLASS_D - 0.5);
 
-    const plant = new Plant(typeId, x, z, { variant });
+    // Snap to grid
+    if (col === null || row === null) {
+      const lx = (nx - 0.5) * SUB_W;
+      const lz = (nz - 0.5) * SUB_D;
+      const cell = this.hitToCell(lx, lz);
+      col = cell.col; row = cell.row;
+    }
+    if (!this.isCellFree(col, row)) return null;
+    const { nx: snx, nz: snz } = this.cellToNorm(col, row);
+
+    const x = (snx - 0.5) * (GLASS_W - 0.6);
+    const z = (snz - 0.5) * (GLASS_D - 0.5);
+
+    const plant = new Plant(typeId, x, z, { variant, col, row, cellW: CELL_W, cellD: CELL_D });
     const mesh = plant.buildMesh(this.camera);
 
-    // Place plant base on substrate surface
-    const surfY = this.substrate.getSurfaceY(nx, nz);
-    const spriteHalfH = (0.5 + plant.getStageFloat() * 0.8) / 2;
-    mesh.position.set(x, surfY + spriteHalfH, z);
+    const surfY = this.substrate.getSurfaceY(snx, snz);
+    if (plant.type.flat) {
+      mesh.position.set(x, surfY + 0.01, z);
+    } else {
+      const spriteHalfH = (0.5 + plant.getStageFloat() * 0.8) / 2;
+      mesh.position.set(x, surfY + spriteHalfH, z);
+    }
     mesh.renderOrder = ++this._placementCounter;
 
     this._plantsGroup.add(mesh);
     this.plants.push(plant);
+    this._occupyCell(col, row);
     return plant;
   }
 
@@ -171,6 +248,7 @@ export class Terrarium {
     const idx = this.plants.indexOf(plant);
     if (idx < 0) return;
     this.plants.splice(idx, 1);
+    if (plant.col !== null && plant.row !== null) this._freeCell(plant.col, plant.row);
     this._plantsGroup.remove(plant.mesh);
     this.careSystem.resolveAll(plant.id);
     plant.dispose();
@@ -178,20 +256,35 @@ export class Terrarium {
 
   // ── Hardscape ─────────────────────────────────────────────────────────────
 
-  addHardscape(typeId, nx, nz, variant = 0) {
+  addHardscape(typeId, nx, nz, variant = 0, col = null, row = null) {
     if (!HARDSCAPE_TYPES[typeId]) return null;
-    const x = (nx - 0.5) * (GLASS_W - 0.6);
-    const z = (nz - 0.5) * (GLASS_D - 0.5);
 
-    const item = new HardscapeItem(typeId, x, z, { variant });
+    if (col === null || row === null) {
+      const lx = (nx - 0.5) * SUB_W;
+      const lz = (nz - 0.5) * SUB_D;
+      const cell = this.hitToCell(lx, lz);
+      col = cell.col; row = cell.row;
+    }
+    if (!this.isCellFree(col, row)) return null;
+    const { nx: snx, nz: snz } = this.cellToNorm(col, row);
+
+    const x = (snx - 0.5) * (GLASS_W - 0.6);
+    const z = (snz - 0.5) * (GLASS_D - 0.5);
+
+    const item = new HardscapeItem(typeId, x, z, { variant, col, row, cellW: CELL_W, cellD: CELL_D });
     const mesh = item.buildMesh();
 
-    const surfY = this.substrate.getSurfaceY(nx, nz);
-    mesh.position.set(x, surfY + 0.25, z);
+    const surfY = this.substrate.getSurfaceY(snx, snz);
+    if (item.type.flat) {
+      mesh.position.set(x, surfY + 0.008, z);
+    } else {
+      mesh.position.set(x, surfY + 0.25, z);
+    }
     mesh.renderOrder = ++this._placementCounter;
 
     this._hardscapeGroup.add(mesh);
     this.hardscape.push(item);
+    this._occupyCell(col, row);
     return item;
   }
 
@@ -199,6 +292,7 @@ export class Terrarium {
     const idx = this.hardscape.indexOf(item);
     if (idx < 0) return;
     this.hardscape.splice(idx, 1);
+    if (item.col !== null && item.row !== null) this._freeCell(item.col, item.row);
     this._hardscapeGroup.remove(item.mesh);
     item.dispose();
   }
@@ -253,8 +347,12 @@ export class Terrarium {
         const normX = (p.x / (GLASS_W - 0.6)) + 0.5;
         const normZ = (p.z / (GLASS_D - 0.5)) + 0.5;
         const surfY = this.substrate.getSurfaceY(normX, normZ);
-        const spriteHalfH = (0.5 + p.getStageFloat() * 0.8) / 2;
-        p.mesh.position.y = surfY + spriteHalfH;
+        if (p.type.flat) {
+          p.mesh.position.y = surfY + 0.01;
+        } else {
+          const spriteHalfH = (0.5 + p.getStageFloat() * 0.8) / 2;
+          p.mesh.position.y = surfY + spriteHalfH;
+        }
       }
     });
   }
@@ -288,7 +386,9 @@ export class Terrarium {
         if (!PLANT_TYPES[ps.typeId]) return;
         const nx = (ps.x / (GLASS_W - 0.6)) + 0.5;
         const nz = (ps.z / (GLASS_D - 0.5)) + 0.5;
-        const plant = this.addPlant(ps.typeId, nx, nz, ps.variant ?? 0);
+        const savedCol = ps.col ?? null;
+        const savedRow = ps.row ?? null;
+        const plant = this.addPlant(ps.typeId, nx, nz, ps.variant ?? 0, savedCol, savedRow);
         if (!plant) return;
         plant.growthProgress = ps.growthProgress ?? 0;
         plant.health         = ps.health         ?? 100;
@@ -304,7 +404,9 @@ export class Terrarium {
         if (!HARDSCAPE_TYPES[hs.typeId]) return;
         const nx = (hs.x / (GLASS_W - 0.6)) + 0.5;
         const nz = (hs.z / (GLASS_D - 0.5)) + 0.5;
-        const item = this.addHardscape(hs.typeId, nx, nz, hs.variant ?? 0);
+        const savedCol = hs.col ?? null;
+        const savedRow = hs.row ?? null;
+        const item = this.addHardscape(hs.typeId, nx, nz, hs.variant ?? 0, savedCol, savedRow);
         if (item) item.id = hs.id;
       });
     }

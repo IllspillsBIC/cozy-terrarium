@@ -11,6 +11,7 @@ export const HARDSCAPE_TYPES = {
   },
   flat_stone: {
     id: 'flat_stone', name: 'Flat Stone', emoji: '🪨',
+    flat: true,
     palette:    ['#56606a', '#788090', '#9ab0bc', '#242e38', '#c0d4dc'],
     altPalette: ['#786050', '#a08070', '#c8a890', '#382a20', '#e8d0b8'],
     description: 'Flat slate flagstone'
@@ -55,9 +56,9 @@ export const HARDSCAPE_TYPES = {
 
 export const HARDSCAPE_TYPE_LIST = Object.values(HARDSCAPE_TYPES);
 
-// Canvas 128×96 px — logical grid 64×48, 2×2 blocks
-const HARDSCAPE_W = 128;
-const HARDSCAPE_H = 96;
+// Canvas 256×192 px — logical grid 64×48, 4×4 blocks
+const HARDSCAPE_W = 256;
+const HARDSCAPE_H = 192;
 
 function makeCanvas(w, h) {
   const c = new OffscreenCanvas(w, h);
@@ -67,7 +68,7 @@ function makeCanvas(w, h) {
 function b(ctx, gx, gy, color) {
   if (gx < 0 || gx > 63 || gy < 0 || gy > 47) return;
   ctx.fillStyle = color;
-  ctx.fillRect(gx * 2, gy * 2, 2, 2);
+  ctx.fillRect(gx * 4, gy * 4, 4, 4);
 }
 
 const spriteDrawers = {
@@ -355,6 +356,40 @@ const spriteDrawers = {
   }
 };
 
+function drawFlatStone(ctx, palette) {
+  const [sh, mid, hi, ol, br] = palette;
+  const W = HARDSCAPE_W, H = HARDSCAPE_H;
+  // Draw top-down flat stone: irregular slab shape
+  ctx.fillStyle = ol;
+  ctx.beginPath();
+  ctx.ellipse(W*0.5, H*0.5, W*0.44, H*0.40, 0.15, 0, Math.PI*2);
+  ctx.fill();
+  // Main stone body
+  ctx.fillStyle = sh;
+  ctx.beginPath();
+  ctx.ellipse(W*0.5, H*0.5, W*0.40, H*0.36, 0.15, 0, Math.PI*2);
+  ctx.fill();
+  // Mid highlight
+  ctx.fillStyle = mid;
+  ctx.beginPath();
+  ctx.ellipse(W*0.44, H*0.44, W*0.28, H*0.22, 0.1, 0, Math.PI*2);
+  ctx.fill();
+  // Bright center
+  ctx.fillStyle = hi;
+  ctx.beginPath();
+  ctx.ellipse(W*0.42, H*0.42, W*0.14, H*0.10, -0.1, 0, Math.PI*2);
+  ctx.fill();
+  // Crack lines
+  ctx.strokeStyle = ol;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(W*0.3, H*0.55); ctx.lineTo(W*0.55, H*0.38);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(W*0.6, H*0.52); ctx.lineTo(W*0.72, H*0.44);
+  ctx.stroke();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // HardscapeItem Class
 // ─────────────────────────────────────────────────────────────────────────────
@@ -366,6 +401,10 @@ export class HardscapeItem {
     this.z = z;
     this.id = options.id || Math.random().toString(36).slice(2, 9);
     this.variant = options.variant ?? 0;
+    this.col = options.col ?? null;
+    this.row = options.row ?? null;
+    this.cellW = options.cellW ?? 0.24;
+    this.cellD = options.cellD ?? 0.27;
     this.mesh = null;
   }
 
@@ -377,20 +416,32 @@ export class HardscapeItem {
     const useAlt = (this.variant & 2) === 2;
     const palette = useAlt ? this.type.altPalette : this.type.palette;
 
-    if (flipH) { ctx.save(); ctx.translate(HARDSCAPE_W, 0); ctx.scale(-1, 1); }
-    const drawer = spriteDrawers[this.typeId] || spriteDrawers.rock;
-    drawer(ctx, palette);
-    if (flipH) ctx.restore();
+    if (this.type.flat) {
+      drawFlatStone(ctx, palette);
+    } else {
+      if (flipH) { ctx.save(); ctx.translate(HARDSCAPE_W, 0); ctx.scale(-1, 1); }
+      const drawer = spriteDrawers[this.typeId] || spriteDrawers.rock;
+      drawer(ctx, palette);
+      if (flipH) ctx.restore();
+    }
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = THREE.NearestFilter;
 
-    const aspect = HARDSCAPE_W / HARDSCAPE_H; // 4:3 landscape
-    const scale = 0.50;
-    const geo = new THREE.PlaneGeometry(scale * aspect, scale);
+    let geo;
+    if (this.type.flat) {
+      const cw = this.cellW || 0.24;
+      const cd = this.cellD || 0.27;
+      geo = new THREE.PlaneGeometry(cw * 0.92, cd * 0.92);
+    } else {
+      const aspect = HARDSCAPE_W / HARDSCAPE_H;
+      const scale = 0.50;
+      geo = new THREE.PlaneGeometry(scale * aspect, scale);
+    }
+
     const mat = new THREE.MeshBasicMaterial({
-      map: tex, transparent: true, alphaTest: 0.1,
+      map: tex, transparent: true, alphaTest: 0.05,
       depthWrite: false, side: THREE.DoubleSide
     });
 
@@ -402,13 +453,14 @@ export class HardscapeItem {
     }
 
     this.mesh = new THREE.Mesh(geo, mat);
+    if (this.type.flat) this.mesh.rotation.x = -Math.PI / 2;
     return this.mesh;
   }
 
   faceCamera(camera) { if (this.mesh) this.mesh.lookAt(camera.position); }
 
   getState() {
-    return { typeId: this.typeId, x: this.x, z: this.z, id: this.id, variant: this.variant };
+    return { typeId: this.typeId, x: this.x, z: this.z, id: this.id, variant: this.variant, col: this.col ?? null, row: this.row ?? null };
   }
 
   dispose() {

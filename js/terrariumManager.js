@@ -155,6 +155,7 @@ export class TerrariumManager {
   evaluateCareAll()          { this.terrariums.forEach(t => t.careSystem.evaluate(t.plants, t.env)); }
   processNeglectAll(delta)   { this.terrariums.forEach(t => t.careSystem.processNeglect(t.plants, delta)); }
   setTopoLinesVisible(v)     { this.terrariums.forEach(t => t.substrate.showTopoLines(v)); }
+  setPlacementGridVisible(v) { this.terrariums.forEach(t => t.showPlacementGrid(v)); }
 
   // ── Persistence ───────────────────────────────────────────────────────────
 

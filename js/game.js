@@ -102,6 +102,10 @@ export class Game {
 
     // Visual updates
     this.terrariumManager.setTopoLinesVisible(this.ui.getActiveTool() === 'sculpt');
+    this.terrariumManager.setPlacementGridVisible(
+      this.ui.getActiveTool() === 'place' &&
+      !!(this.ui.getSelectedPlant() || this.ui.getSelectedHardscape())
+    );
     this.terrariumManager.update();         // camera lerp
     this.terrariumManager.updateBillboards(); // face-camera
     this.weather.update(this._time);        // sky animation

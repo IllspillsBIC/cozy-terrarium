@@ -20,6 +20,7 @@ export const PLANT_TYPES = {
   },
   moss: {
     id: 'moss', name: 'Moss', emoji: '🍃',
+    flat: true,
     minHumidity: 70, waterNeed: 'high', growthRate: 1.5,
     palette:    ['#246010', '#3a9020', '#60be38', '#0c2e06', '#90e050'],
     altPalette: ['#708010', '#a0bc20', '#c8e040', '#283008', '#e8f860'],
@@ -79,21 +80,21 @@ export const PLANT_TYPES = {
 export const PLANT_TYPE_LIST = Object.values(PLANT_TYPES);
 export const STAGES = { seedling: 0, juvenile: 25, mature: 60, elder: 100 };
 
-// Doubled to 192×288 — logical grid is 96×144 (2px per cell)
-const SPRITE_W = 192;
-const SPRITE_H = 288;
+// Quadrupled to 384×576 — logical grid is 96×144 (4px per cell)
+const SPRITE_W = 384;
+const SPRITE_H = 576;
 
 function makeCanvas(w, h) {
   const c = new OffscreenCanvas(w, h);
   return { canvas: c, ctx: c.getContext('2d') };
 }
 
-// Draw a 2×2 pixel block at logical grid position (gx, gy).
-// Grid is 96 wide × 144 tall — doubled from previous 48×72.
+// Draw a 4×4 pixel block at logical grid position (gx, gy).
+// Grid is 96 wide × 144 tall — 4px per cell.
 function b(ctx, gx, gy, color) {
   if (gx < 0 || gx > 95 || gy < 0 || gy > 143) return;
   ctx.fillStyle = color;
-  ctx.fillRect(gx * 2, gy * 2, 2, 2);
+  ctx.fillRect(gx * 4, gy * 4, 4, 4);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -784,6 +785,45 @@ const spriteDrawers = {
 
 };
 
+function drawFlatMoss(ctx, stage, palette) {
+  const [sh, mid, hi, ol, br] = palette;
+  const W = SPRITE_W, H = SPRITE_H;
+  // Background base color
+  ctx.fillStyle = sh;
+  ctx.fillRect(0, 0, W, H);
+  // Mossy blobs — varying sizes scattered over the canvas
+  const rng = (n) => ((n * 6271 + 1) % 997) / 997;
+  const count = Math.floor(60 + stage * 100);
+  for (let i = 0; i < count; i++) {
+    const rx = rng(i * 3 + 1) * W;
+    const ry = rng(i * 3 + 2) * H;
+    const r = (8 + rng(i * 3 + 3) * 24) * (0.5 + stage * 0.5);
+    const col = (i % 3 === 0) ? hi : (i % 3 === 1) ? mid : sh;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.ellipse(rx, ry, r * 1.2, r * 0.8, rng(i) * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Dark outline specks
+  for (let i = 0; i < 30; i++) {
+    ctx.fillStyle = ol;
+    ctx.fillRect(
+      Math.floor(rng(i * 7 + 5) * W),
+      Math.floor(rng(i * 7 + 6) * H),
+      3, 3
+    );
+  }
+  // Bright tips
+  for (let i = 0; i < 40; i++) {
+    ctx.fillStyle = br;
+    ctx.fillRect(
+      Math.floor(rng(i * 11 + 7) * W),
+      Math.floor(rng(i * 11 + 8) * H),
+      2, 2
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Plant Class
 // ─────────────────────────────────────────────────────────────────────────────
@@ -799,6 +839,10 @@ export class Plant {
     this.careState = options.careState || 'HEALTHY';
     this.id = options.id || Math.random().toString(36).slice(2, 9);
     this.variant = options.variant ?? 0;
+    this.col = options.col ?? null;
+    this.row = options.row ?? null;
+    this.cellW = options.cellW ?? 0.24;
+    this.cellD = options.cellD ?? 0.27;
     this._stage = -1;
     this.mesh = null;
   }
@@ -817,6 +861,10 @@ export class Plant {
     const flipH  = (this.variant & 1) === 1;
     const useAlt = (this.variant & 2) === 2;
     const palette = useAlt ? this.type.altPalette : this.type.palette;
+    if (this.type.flat) {
+      drawFlatMoss(ctx, this.getStageFloat(), palette);
+      return;
+    }
     if (flipH) { ctx.save(); ctx.translate(SPRITE_W, 0); ctx.scale(-1, 1); }
     const drawer = spriteDrawers[this.typeId] || spriteDrawers.fern;
     drawer(ctx, this.getStageFloat(), palette);
@@ -837,12 +885,24 @@ export class Plant {
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = THREE.NearestFilter;
 
-    const scale = 0.5 + this.getStageFloat() * 0.8;
-    const geo = new THREE.PlaneGeometry(scale * (SPRITE_W / SPRITE_H), scale);
-    const mat = new THREE.MeshBasicMaterial({
-      map: tex, transparent: true, alphaTest: 0.1,
-      depthWrite: false, side: THREE.DoubleSide
-    });
+    let geo, mat;
+    if (this.type.flat) {
+      // Flat carpet — horizontal plane, sized to cell footprint stored on plant
+      const cw = this.cellW || 0.24;
+      const cd = this.cellD || 0.27;
+      geo = new THREE.PlaneGeometry(cw, cd);
+      mat = new THREE.MeshBasicMaterial({
+        map: tex, transparent: true, alphaTest: 0.05,
+        depthWrite: false, side: THREE.DoubleSide
+      });
+    } else {
+      const scale = 0.5 + this.getStageFloat() * 0.8;
+      geo = new THREE.PlaneGeometry(scale * (SPRITE_W / SPRITE_H), scale);
+      mat = new THREE.MeshBasicMaterial({
+        map: tex, transparent: true, alphaTest: 0.1,
+        depthWrite: false, side: THREE.DoubleSide
+      });
+    }
 
     if (this.mesh) {
       this.mesh.geometry.dispose();
@@ -852,6 +912,7 @@ export class Plant {
     }
 
     this.mesh = new THREE.Mesh(geo, mat);
+    if (this.type.flat) this.mesh.rotation.x = -Math.PI / 2;
     this._camera = camera;
     this._stage = this.getStage();
     return this.mesh;
@@ -869,9 +930,16 @@ export class Plant {
     this.mesh.material.needsUpdate = true;
     oldTex?.dispose();
 
-    const scale = 0.5 + this.getStageFloat() * 0.8;
-    this.mesh.geometry.dispose();
-    this.mesh.geometry = new THREE.PlaneGeometry(scale * (SPRITE_W / SPRITE_H), scale);
+    if (this.type.flat) {
+      const cw = this.cellW || 0.24;
+      const cd = this.cellD || 0.27;
+      this.mesh.geometry.dispose();
+      this.mesh.geometry = new THREE.PlaneGeometry(cw, cd);
+    } else {
+      const scale = 0.5 + this.getStageFloat() * 0.8;
+      this.mesh.geometry.dispose();
+      this.mesh.geometry = new THREE.PlaneGeometry(scale * (SPRITE_W / SPRITE_H), scale);
+    }
     this._stage = this.getStage();
   }
 
@@ -888,7 +956,8 @@ export class Plant {
       typeId: this.typeId, x: this.x, z: this.z,
       growthProgress: this.growthProgress, health: this.health,
       waterLevel: this.waterLevel, careState: this.careState,
-      id: this.id, variant: this.variant
+      id: this.id, variant: this.variant,
+      col: this.col ?? null, row: this.row ?? null
     };
   }
 

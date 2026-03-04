@@ -68,22 +68,23 @@ export class InputHandler {
     const hardscapeTypeId = this.ui.getSelectedHardscape();
     if (!plantTypeId && !hardscapeTypeId) return;
 
-    // Raycast against the substrate surface plane
+    // Raycast against substrate surface plane
     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1.0);
     const hit = new THREE.Vector3();
     if (!this._raycaster.ray.intersectPlane(plane, hit)) return;
 
     // Convert to local terrarium space
     const localHit = terrarium.group.worldToLocal(hit.clone());
-    const nx = (localHit.x / 4.0) + 0.5;
-    const nz = (localHit.z / 3.0) + 0.5;
 
-    if (nx < 0.05 || nx > 0.95 || nz < 0.05 || nz > 0.95) return;
-
+    // Snap to nearest grid cell — terrarium handles occupancy check
     if (hardscapeTypeId) {
-      terrarium.addHardscape(hardscapeTypeId, nx, nz, this.ui.getSelectedHardscapeVariant());
+      const cell = terrarium.hitToCell(localHit.x, localHit.z);
+      const { nx, nz } = terrarium.cellToNorm(cell.col, cell.row);
+      terrarium.addHardscape(hardscapeTypeId, nx, nz, this.ui.getSelectedHardscapeVariant(), cell.col, cell.row);
     } else {
-      terrarium.addPlant(plantTypeId, nx, nz, this.ui.getSelectedPlantVariant());
+      const cell = terrarium.hitToCell(localHit.x, localHit.z);
+      const { nx, nz } = terrarium.cellToNorm(cell.col, cell.row);
+      terrarium.addPlant(plantTypeId, nx, nz, this.ui.getSelectedPlantVariant(), cell.col, cell.row);
     }
   }
 
