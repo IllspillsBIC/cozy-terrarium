@@ -3,9 +3,12 @@
 import * as THREE from 'three';
 import { Terrarium } from './terrarium.js';
 
-const SPACING = 8;
-const LERP_SPEED = 0.08;
+const SPACING      = 8;
+const LERP_SPEED   = 0.08;
 const LERP_THRESHOLD = 0.01;
+const ORBIT_RADIUS = 7;
+const CAM_HEIGHT   = 1.5;
+const MAX_SWING    = Math.PI / 4; // 45 degrees
 
 // Three fixed slots: 0 = left, 1 = center, 2 = right.
 // Slot positions in world space: slot * SPACING.
@@ -20,12 +23,16 @@ export class TerrariumManager {
 
     this._slots = [null, null, null]; // indexed by slot 0/1/2
     this.activeIndex = 1;             // slot index of active terrarium
-    this._targetX = SPACING;          // camera target x = slot * SPACING
+    this._targetX = SPACING;          // camera target center x = slot * SPACING
+    this._currentX = SPACING;         // lerped camera center x
+    this._targetOrbit = 0;            // target orbit angle (radians)
+    this._currentOrbit = 0;           // lerped orbit angle
     this._transitioning = false;
 
     // First terrarium always goes in the center slot (1)
     this._addToSlot(1);
-    this.camera.position.x = this._targetX;
+    this.camera.position.set(SPACING, CAM_HEIGHT, ORBIT_RADIUS);
+    this.camera.lookAt(SPACING, 0.5, 0);
   }
 
   // ── Slot helpers ──────────────────────────────────────────────────────────
@@ -34,6 +41,9 @@ export class TerrariumManager {
   get terrariums() {
     return this._slots.filter(Boolean);
   }
+
+  /** The world-space X of the active terrarium center (for lights etc.). */
+  get activeCenterX() { return this._targetX; }
 
   _addToSlot(slot, options = {}) {
     if (slot < 0 || slot >= SLOT_COUNT || this._slots[slot]) return null;
@@ -63,6 +73,7 @@ export class TerrariumManager {
     if (!this._slots[slot]) return false;
     this.activeIndex = slot;
     this._targetX = slot * SPACING;
+    this._targetOrbit = 0; // reset swing when changing terrarium
     this._transitioning = true;
     return true;
   }
@@ -97,22 +108,41 @@ export class TerrariumManager {
 
   canAddMore() { return this._slots.some(s => s === null); }
 
+  // ── Swing (Shift + Arrow) ─────────────────────────────────────────────────
+
+  swingLeft()  { this._targetOrbit = Math.max(this._targetOrbit - MAX_SWING, -MAX_SWING); }
+  swingRight() { this._targetOrbit = Math.min(this._targetOrbit + MAX_SWING,  MAX_SWING); }
+
   // ── Frame update ──────────────────────────────────────────────────────────
 
   update() {
     const cam = this.camera;
-    const dx = this._targetX - cam.position.x;
+
+    // Lerp camera center X (terrarium navigation)
+    const dx = this._targetX - this._currentX;
     if (Math.abs(dx) > LERP_THRESHOLD) {
-      cam.position.x += dx * LERP_SPEED;
-      cam.lookAt(cam.position.x, 0.5, 0);
+      this._currentX += dx * LERP_SPEED;
       this._transitioning = true;
-    } else {
-      if (this._transitioning) {
-        cam.position.x = this._targetX;
-        cam.lookAt(this._targetX, 0.5, 0);
-        this._transitioning = false;
-      }
+    } else if (this._transitioning) {
+      this._currentX = this._targetX;
+      this._transitioning = false;
     }
+
+    // Lerp orbit angle (swing view)
+    const da = this._targetOrbit - this._currentOrbit;
+    if (Math.abs(da) > 0.001) {
+      this._currentOrbit += da * LERP_SPEED;
+    } else {
+      this._currentOrbit = this._targetOrbit;
+    }
+
+    // Apply combined position — orbit around the active terrarium center
+    cam.position.set(
+      this._currentX + Math.sin(this._currentOrbit) * ORBIT_RADIUS,
+      CAM_HEIGHT,
+      Math.cos(this._currentOrbit) * ORBIT_RADIUS
+    );
+    cam.lookAt(this._currentX, 0.5, 0);
   }
 
   isTransitioning() { return this._transitioning; }
@@ -153,7 +183,10 @@ export class TerrariumManager {
     const savedActive = state.activeIndex ?? 1;
     this.activeIndex = this._slots[savedActive] ? savedActive : this._slots.findIndex(Boolean);
     this._targetX = this.activeIndex * SPACING;
-    this.camera.position.x = this._targetX;
+    this._currentX = this._targetX;
+    this._targetOrbit = 0;
+    this._currentOrbit = 0;
+    this.camera.position.set(this._targetX, CAM_HEIGHT, ORBIT_RADIUS);
     this.camera.lookAt(this._targetX, 0.5, 0);
   }
 }

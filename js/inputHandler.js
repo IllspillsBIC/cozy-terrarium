@@ -162,7 +162,15 @@ export class InputHandler {
   }
 
   _onKey(event) {
-    if (event.key === 'ArrowLeft') this.manager.navigateLeft();
-    if (event.key === 'ArrowRight') this.manager.navigateRight();
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      if (event.shiftKey) {
+        event.preventDefault();
+        if (event.key === 'ArrowLeft')  this.manager.swingLeft();
+        if (event.key === 'ArrowRight') this.manager.swingRight();
+      } else {
+        if (event.key === 'ArrowLeft')  this.manager.navigateLeft();
+        if (event.key === 'ArrowRight') this.manager.navigateRight();
+      }
+    }
   }
 }

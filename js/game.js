@@ -106,7 +106,7 @@ export class Game {
     this.terrariumManager.updateBillboards(); // face-camera
     this.weather.update(this._time);        // sky animation
     this.room.update(this._time);           // curtains + window texture dirty
-    this.sceneManager.setTerrariumLightX(this.sceneManager.camera.position.x); // spot follows active
+    this.sceneManager.setTerrariumLightX(this.terrariumManager.activeCenterX); // spot follows active terrarium
     this.particles.update(this._time, this.timeManager.speedMultiplier); // dust motes
     this.ui.updateHUD();                    // overlay HUD
 
