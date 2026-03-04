@@ -82,11 +82,11 @@ export class SceneManager {
       color: 0xFFFFFF, transparent: true, opacity: 0.33,
       depthWrite: false, blending: THREE.AdditiveBlending
     });
-    const coneGeo = new THREE.CylinderGeometry(0.06, 2.8, 8.0, 18, 1, true);
-    const poolGeo = new THREE.CircleGeometry(2.4, 24);
+    const coneGeo = new THREE.CylinderGeometry(0.06, 3.22, 8.0, 18, 1, true);
+    const poolGeo = new THREE.CircleGeometry(2.76, 24);
 
     this._terrariumSpots = SLOT_X.map(sx => {
-      const spot = new THREE.SpotLight(0xFFFFFF, 7.425, 22, Math.PI / 9, 0.30, 1.6);
+      const spot = new THREE.SpotLight(0xFFFFFF, 7.425, 22, Math.PI / 9 * 1.15, 0.30, 1.6);
       spot.position.set(sx, 6.5, -0.02);
       spot.target.position.set(sx, -1.5, -0.52);
       this.scene.add(spot);
