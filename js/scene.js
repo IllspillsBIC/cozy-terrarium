@@ -87,18 +87,18 @@ export class SceneManager {
 
     this._terrariumSpots = SLOT_X.map(sx => {
       const spot = new THREE.SpotLight(0xFFFFFF, 7.425, 22, Math.PI / 9, 0.30, 1.6);
-      spot.position.set(sx, 6.5, 0.5);
-      spot.target.position.set(sx, -1.5, 0);
+      spot.position.set(sx, 6.5, -0.02);
+      spot.target.position.set(sx, -1.5, -0.52);
       this.scene.add(spot);
       this.scene.add(spot.target);
 
       const cone = new THREE.Mesh(coneGeo, coneMat.clone());
-      cone.position.set(sx, 6.5 - 4.0, 0.25);
+      cone.position.set(sx, 6.5 - 4.0, -0.27);
       this.scene.add(cone);
 
       const pool = new THREE.Mesh(poolGeo, poolMat.clone());
       pool.rotation.x = -Math.PI / 2;
-      pool.position.set(sx, -1.50, 0);
+      pool.position.set(sx, -1.50, -0.52);
       this.scene.add(pool);
 
       return { spot, cone, pool };
