@@ -2370,8 +2370,8 @@ export class Room {
   // ── Animate ───────────────────────────────────────────────────────────────
   update(time) {
     if (this._windowTex) this._windowTex.needsUpdate = true;
-    if (this._shaftMesh && this._weather) {
-      this._shaftMesh.material.opacity = this._weather.getBrightness() * 0.38;
+    if (this._shaftMesh) {
+      this._shaftMesh.material.opacity = 0.38;
     }
 
     // Candle flicker
