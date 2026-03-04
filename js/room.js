@@ -270,14 +270,14 @@ export class Room {
   _buildBookshelf() {
     const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a2e10, roughness: 0.9 });
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(4.2, 5.5, 0.85), woodMat);
-    shelf.position.set(7, 0.5, -5.52);
+    shelf.position.set(7, -0.5, -5.52);
     this.group.add(shelf);
 
     // Shelf boards (visible horizontal lines)
     const boardMat = new THREE.MeshStandardMaterial({ color: 0x5a3c18, roughness: 0.85 });
     [-1.5, -0.3, 0.9, 2.1].forEach(sy => {
       const board = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.06, 0.8), boardMat);
-      board.position.set(7, sy + 0.5 - 0.5, -5.52);
+      board.position.set(7, sy - 1.0, -5.52);
       this.group.add(board);
     });
 
@@ -301,7 +301,7 @@ export class Room {
         const col = bookColors[slotIdx % bookColors.length];
         const bMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.8 });
         const book = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.5), bMat);
-        book.position.set(7 + bx + bw / 2, sy + 0.5 + bh / 2 - 0.5, -5.22);
+        book.position.set(7 + bx + bw / 2, sy - 1.0 + bh / 2, -5.22);
         book.rotation.y = (slotIdx % 5 === 0) ? 0.08 : 0;
         this.group.add(book);
         bx += bw + 0.025;
@@ -313,7 +313,7 @@ export class Room {
         // Small clay pot / vase
         const vaseMat = new THREE.MeshStandardMaterial({ color: 0xc07038, roughness: 0.8 });
         const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.08, 0.35, 8), vaseMat);
-        vase.position.set(7 + 1.45, sy + 0.5 + 0.18, -5.22);
+        vase.position.set(7 + 1.45, sy - 0.32, -5.22);
         this.group.add(vase);
       }
       if (si === 3) {
@@ -365,7 +365,7 @@ export class Room {
 
         const clockMat = new THREE.MeshStandardMaterial({ map: clockTex, roughness: 0.5 });
         const clock = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.08), clockMat);
-        clock.position.set(7 + 1.45, sy + 0.5 + 0.28, -5.18);
+        clock.position.set(7 + 1.45, sy - 0.22, -5.18);
         this.group.add(clock);
       }
     });
@@ -2162,7 +2162,7 @@ export class Room {
       ctx.beginPath(); ctx.moveTo(w*0.34,h*0.88); ctx.lineTo(w*0.66,h*0.88); ctx.lineTo(w*0.60,h*0.98); ctx.lineTo(w*0.40,h*0.98); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#b87848';
       ctx.fillRect(w*0.30, h*0.86, w*0.40, h*0.04);
-    }, 110, 200, 2.0, 4.5, 6.0);
+    }, 110, 200, 2.0, 4.5, 3.5);
 
     // ── 3. ZZ Plant (clustered arching stems, between T2 and T3) ─────────────
     makePlant((ctx, w, h) => {
@@ -2300,14 +2300,14 @@ export class Room {
       const bx = 5.2 + (i / 10) * 3.6;
       const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: 0.9 });
       const bulb = new THREE.Mesh(glowGeo, mat);
-      bulb.position.set(bx, 3.56, -5.14);
+      bulb.position.set(bx, 2.56, -5.14);
       this.group.add(bulb);
       // Tiny wire between bulbs
       if (i > 0) {
         const wireMat = new THREE.LineBasicMaterial({ color: 0x3a2808, transparent: true, opacity: 0.6 });
         const pts = [
-          new THREE.Vector3(5.2 + ((i - 1) / 10) * 3.6, 3.56 + Math.sin(i * 0.8) * 0.04, -5.14),
-          new THREE.Vector3(bx, 3.56, -5.14)
+          new THREE.Vector3(5.2 + ((i - 1) / 10) * 3.6, 2.56 + Math.sin(i * 0.8) * 0.04, -5.14),
+          new THREE.Vector3(bx, 2.56, -5.14)
         ];
         const wire = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat);
         this.group.add(wire);
@@ -2315,7 +2315,7 @@ export class Room {
     }
     // Soft fairy light glow over bookshelf
     const fairyAmb = new THREE.PointLight(0xfffce0, 0.34, 5.5);
-    fairyAmb.position.set(7.0, 3.4, -5.2);
+    fairyAmb.position.set(7.0, 2.4, -5.2);
     this.group.add(fairyAmb);
 
     // Hanging ivy planter on wall (between window and painting)
